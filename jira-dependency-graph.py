@@ -47,7 +47,7 @@ class JiraSearch(object):
         return content['issues']
 
 
-def build_graph_data(start_issue_key, jira, excludes):
+def build_graph_data(start_issue_key, jira, excludes, depth):
     """ Given a starting image key and the issue-fetching function build up the GraphViz data representing relationships
         between issues. This will consider both subtasks and issue links.
     """
@@ -80,8 +80,11 @@ def build_graph_data(start_issue_key, jira, excludes):
     # since the graph can be cyclic we need to prevent infinite recursion
     seen = []
 
-    def walk(issue_key, graph):
+    def walk(issue_key, graph, depth):
         """ issue is the JSON representation of the issue """
+        depth = depth - 1
+        if depth == 0:
+            return graph
         issue = jira.get_issue(issue_key)
         seen.append(issue_key)
         children = []
@@ -110,10 +113,10 @@ def build_graph_data(start_issue_key, jira, excludes):
                         graph.append(result[1])
         # now construct graph data for all subtasks and links of this issue
         for child in (x for x in children if x not in seen):
-            walk(child, graph)
+            walk(child, graph, depth)
         return graph
 
-    return walk(start_issue_key, [])
+    return walk(start_issue_key, [], depth)
 
 
 def create_graph_image(graph_data, image_file):
@@ -149,6 +152,7 @@ def parse_args():
     parser.add_argument('-l', '--local', action='store_true', default=False, help='Render graphviz code to stdout')
     parser.add_argument('-x', '--exclude-link', dest='excludes', action='append', help='Exclude link type(s)')
     parser.add_argument('issue', nargs='?', help='The issue key (e.g. JRADEV-1107, JRADEV-1391)')
+    parser.add_argument('-d', '--depth', dest='depth', default='2', help='Depth to search to')
 
     return parser.parse_args()
 
@@ -160,7 +164,7 @@ def main():
     auth = (options.user, options.password)
     jira = JiraSearch(options.jira_url, auth)
 
-    graph = build_graph_data(options.issue, jira, options.excludes)
+    graph = build_graph_data(options.issue, jira, options.excludes, int(options.depth))
 
     if options.local:
         print_graph(graph)
