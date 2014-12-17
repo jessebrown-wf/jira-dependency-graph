@@ -23,9 +23,9 @@ def log(*args):
     print(*args, file=sys.stderr)
 
 def strike(text):
-    result = '\u0336' + text + '\u0336'
-    # for c in text:
-        # result = result + c + '\u0335'
+    result = ''
+    for c in text:
+        result = result + c + '\u0336'
     return result
 
 class JiraSearch(object):
