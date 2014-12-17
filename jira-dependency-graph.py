@@ -1,8 +1,11 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import argparse
+import codecs
 import json
 import sys
 
@@ -13,11 +16,17 @@ import requests
 # is only about 5 lines.
 
 GOOGLE_CHART_URL = 'http://chart.apis.google.com/chart?'
-
+UTF8Writer = codecs.getwriter('utf8')
+sys.stdout = UTF8Writer(sys.stdout)
 
 def log(*args):
     print(*args, file=sys.stderr)
 
+def strike(text):
+    result = '\u0336' + text + '\u0336'
+    # for c in text:
+        # result = result + c + '\u0335'
+    return result
 
 class JiraSearch(object):
     """ This factory will create the actual method used to fetch issues from JIRA. This is really just a closure that saves us having
@@ -74,7 +83,7 @@ def build_graph_data(start_issue_key, jira, excludes, depth):
         else:
             log(issue_key + ' <= ' + link_type + ' <= ' + linked_issue_key)
 
-        node = '"%s"->"%s"[label="%s"]' % (issue_key, linked_issue_key, link_type)
+        node = '"%s"->"%s"[label="%s"]' % (strike(issue_key), strike(linked_issue_key), link_type)
         return linked_issue_key, node
 
     # since the graph can be cyclic we need to prevent infinite recursion
@@ -163,6 +172,9 @@ def main():
     # Basic Auth is usually easier for scripts like this to deal with than Cookies.
     auth = (options.user, options.password)
     jira = JiraSearch(options.jira_url, auth)
+
+    if not options.excludes:
+        options.excludes = ''
 
     graph = build_graph_data(options.issue, jira, options.excludes, int(options.depth))
 
